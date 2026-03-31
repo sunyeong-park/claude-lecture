@@ -1138,154 +1138,168 @@ NOTION_TOKEN=secret_여기에_토큰_붙여넣기</code>
 
 <!-- 7강 -->
 <div class="lecture l7" id="lec7">
-  <div class="lec-header"><div class="lec-num">7</div><div class="lec-title"><h2>Claude CLI 채널 기능으로 Discord → Notion 메모 자동화</h2><span class="lec-meta">2시간 · 종합 실습 90분 + 복습 &amp; Q&amp;A 30분</span></div></div>
+  <div class="lec-header"><div class="lec-num">7</div><div class="lec-title"><h2>Discord 웹후크 &amp; Claude 스케줄 → 매일 AI 뉴스 자동화</h2><span class="lec-meta">2시간 · 웹후크 설정 30분 + 스크립트 생성 40분 + 스케줄 등록 30분 + 실습 20분</span></div></div>
   <div class="lec-body">
     <div class="section-label">학습 목표</div>
     <ul class="topics">
-      <li>Claude CLI의 채널(Channel) 기능 개념 이해</li>
-      <li>6강에서 연결한 Notion MCP를 Discord와 연결하기</li>
-      <li>Discord 채널에서 메시지 입력 → Notion 자동 저장</li>
-      <li>코딩 없이 CLI 프롬프트만으로 전체 자동화 구성</li>
+      <li>Discord 웹후크(Webhook) 개념과 봇 방식의 차이 이해</li>
+      <li>6강 Notion 토큰을 그대로 재사용해 페이지 자동 저장</li>
+      <li>Claude Code 스케줄 기능으로 매일 반복 작업 자동화</li>
+      <li>매일 오전 10시 AI 뉴스 수집 → Notion 저장 + Discord 발송 파이프라인 완성</li>
     </ul>
 
     <div class="concept-box">
-      <div class="concept-title">💡 Claude CLI 채널 기능이란?</div>
-      <p>Claude Code(CLI)에서 외부 서비스(Discord 등)를 <strong>직접 채널로 연결</strong>해 메시지를 감지하고 처리하는 기능입니다.<br><br>
-      코드를 짜지 않아도 Claude CLI가 Discord 메시지를 받아서, 6강에서 이미 연결한 Notion MCP를 통해 자동으로 저장합니다.<br><br>
-      <strong>핵심:</strong> 6강의 Notion MCP + 7강의 Discord 채널 연결 = 완전 자동화</p>
+      <div class="concept-title">💡 웹후크(Webhook)란? — 봇과 뭐가 다른가요?</div>
+      <p><strong>봇 방식</strong>은 Discord에 항상 접속해 있는 프로그램이 필요합니다. PC가 켜져 있는 동안 계속 실행해야 하고 설정도 복잡합니다.<br><br>
+      <strong>웹후크 방식</strong>은 Discord가 발급해주는 <strong>URL 하나</strong>로 채널에 메시지를 보내는 단방향 전송입니다. 상시 실행 불필요, 설정 5분 완료.<br><br>
+      <strong>7강 자동화 흐름:</strong> Claude 스케줄이 매일 10시에 깨어나 → AI 뉴스 검색 → Notion에 저장 → 웹후크 URL로 Discord에 발송</p>
     </div>
 
     <div class="three-col">
-      <div class="mini-card purple"><div class="mc-title">6강에서 한 것</div><p>Notion MCP 연결 → Claude CLI가 Notion 페이지 직접 생성 가능</p></div>
-      <div class="mini-card teal"><div class="mc-title">7강에서 추가할 것</div><p>Discord 채널 연결 → CLI가 메시지 감지 후 Notion으로 자동 전달</p></div>
-      <div class="mini-card"><div class="mc-title">완성 후 흐름</div><p>Discord 채팅 입력 → Claude CLI 감지 → Notion 자동 저장</p></div>
+      <div class="mini-card purple"><div class="mc-title">6강에서 한 것</div><p>Notion MCP 연결 → Claude가 Notion 페이지 직접 생성 가능 (토큰 그대로 재사용)</p></div>
+      <div class="mini-card teal"><div class="mc-title">7강에서 추가할 것</div><p>Discord 웹후크 URL 발급 + Claude 스케줄 → 매일 10시 자동 실행</p></div>
+      <div class="mini-card"><div class="mc-title">완성 후 흐름</div><p>매일 10시 → AI 뉴스 3개 수집 → Notion 저장 → Discord 채널 자동 발송</p></div>
     </div>
 
     <div class="divider"></div>
-    <div class="section-label">STEP 1 — Discord 봇 생성 &amp; 토큰 발급</div>
+    <div class="section-label">STEP 1 — Discord 웹후크 URL 발급</div>
     <ol class="steps">
-      <li>Chrome에서 <strong>discord.com/developers/applications</strong> 접속</li>
-      <li><strong>New Application</strong> → 이름 입력 (예: NotionMemo) → <strong>Create</strong></li>
-      <li>왼쪽 메뉴 <strong>Bot</strong> → <strong>Add Bot</strong></li>
-      <li><strong>Reset Token</strong> → 토큰 복사해서 메모장 보관</li>
-      <li><strong>Message Content Intent</strong> 켜기 → <strong>Save Changes</strong></li>
-      <li><strong>OAuth2 → URL Generator</strong> → <strong>bot</strong> + <strong>Send Messages · Read Message History</strong> 체크 → 생성된 URL로 내 Discord 서버에 봇 초대</li>
+      <li>Discord에서 AI 뉴스 메시지를 받을 채널 선택 (또는 새 채널 생성)</li>
+      <li>채널 이름 <strong>우클릭</strong> → <strong>채널 편집(Edit Channel)</strong></li>
+      <li>왼쪽 메뉴 <strong>연동(Integrations)</strong> → <strong>웹후크(Webhooks)</strong> → <strong>새 웹후크 만들기(New Webhook)</strong></li>
+      <li>이름 입력 (예: AI뉴스봇) → <strong>웹후크 URL 복사(Copy Webhook URL)</strong> 클릭</li>
+      <li>복사한 URL 메모장에 보관 → <strong>변경사항 저장(Save)</strong></li>
     </ol>
-
-    <div class="tip"><strong>⚠️ 토큰 절대 공유 금지</strong> — Discord 봇 토큰은 메모장에만 보관하세요.</div>
+    <div class="tip"><strong>⚠️ 웹후크 URL 비공개 보관</strong> — 이 URL이 있으면 누구나 채널에 메시지를 보낼 수 있습니다. 메모장에만 저장하고 절대 공유하지 마세요.</div>
 
     <div class="divider"></div>
-    <div class="section-label">STEP 1-1 — CLI에 Discord 플러그인 설치 &amp; 봇 페어링</div>
-
+    <div class="section-label">STEP 2 — 프로젝트 폴더 생성 &amp; .env 파일 설정</div>
     <div class="code-block">
-      <div class="code-header"><span class="code-label">discord-notion-bot 폴더 생성 &amp; 플러그인 설치</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
-      <code class="block"><span class="cm"># 봇 프로젝트 폴더 생성 및 이동</span>
+      <div class="code-header"><span class="code-label">ai-news-bot 폴더 생성 &amp; 패키지 설치</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+      <code class="block"><span class="cm"># 관리자 PowerShell에서 실행</span>
 <span class="cmd">cd</span> <span class="str">C:\Users\$env:USERNAME\Desktop\claude-work</span>
-<span class="cmd">mkdir</span> discord-notion-bot
-<span class="cmd">cd</span> discord-notion-bot
+<span class="cmd">mkdir</span> ai-news-bot
+<span class="cmd">cd</span> ai-news-bot
 
-<span class="cm"># package.json 초기화</span>
+<span class="cm"># 프로젝트 초기화 &amp; 패키지 설치</span>
 <span class="cmd">npm</span> init -y
-
-<span class="cm"># Discord 플러그인 설치</span>
-<span class="cmd">npm</span> install discord.js @notionhq/client dotenv</code>
+<span class="cmd">npm</span> install axios dotenv @notionhq/client</code>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span class="code-label">설치 확인 — 아래처럼 나오면 성공</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
-      <code class="block"><span class="cm"># 설치된 패키지 확인</span>
-<span class="cmd">ls</span> node_modules
-
-<span class="cm"># 아래 폴더가 보이면 성공!</span>
-<span class="ok">discord.js</span>
-<span class="ok">@notionhq</span>
-<span class="ok">dotenv</span></code>
-    </div>
-
-    <div class="code-block">
-      <div class="code-header"><span class="code-label">.env 파일 생성 — 봇 토큰 페어링</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
-      <code class="block"><span class="cm"># .env 파일 생성</span>
+      <div class="code-header"><span class="code-label">.env 파일 생성 — 세 가지 값 입력</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+      <code class="block"><span class="cm"># .env 파일 생성 후 메모장으로 열기</span>
 <span class="cmd">New-Item</span> -Name <span class="str">".env"</span> -ItemType File
 <span class="cmd">notepad</span> .env
 
-<span class="cm"># 메모장에 아래 내용 입력 후 저장</span>
-<span class="cm"># STEP 1에서 복사한 Discord 봇 토큰 붙여넣기</span>
-DISCORD_TOKEN=여기에_디스코드_봇_토큰
-
-<span class="cm"># 6강에서 발급한 Notion 토큰 그대로</span>
-NOTION_TOKEN=secret_여기에_6강_노션_토큰
-NOTION_PAGE_ID=여기에_저장할_노션_페이지_ID</code>
+<span class="cm"># 메모장에 아래 세 줄 입력 후 저장</span>
+DISCORD_WEBHOOK_URL=<span class="str">https://discord.com/api/webhooks/여기에_STEP1_웹후크_URL</span>
+NOTION_TOKEN=<span class="str">secret_여기에_6강_노션_토큰</span>
+NOTION_PAGE_ID=<span class="str">여기에_저장할_노션_페이지_ID</span></code>
     </div>
-
     <div class="tip"><strong>📌 NOTION_PAGE_ID 찾는 법</strong> — Notion에서 저장할 페이지 열기 → 주소창 URL 맨 끝 32자리<br>
     예: <span class="ic">notion.so/내이름/<strong>abc123def456...</strong></span> → <span class="ic">abc123def456...</span> 부분 복사</div>
 
+    <div class="divider"></div>
+    <div class="section-label">STEP 3 — Claude Code로 뉴스 수집 스크립트 생성</div>
     <div class="concept-box">
-      <div class="concept-title">💡 6강 Notion 토큰 그대로 재사용</div>
-      <p>STEP 1-1에서 .env 파일에 두 토큰을 모두 저장했습니다.<br>
-      이제 Claude Code에 "Discord 봇 만들고 Notion에 저장해줘"라고 요청하면 됩니다.</p>
+      <div class="concept-title">💡 Claude Code가 코드를 대신 짜줍니다</div>
+      <p>직접 코딩할 필요 없습니다. Claude Code에게 원하는 기능을 설명하면 <strong>news.js 파일을 자동으로 생성</strong>해줍니다.<br>
+      생성된 파일을 그대로 실행하면 AI 뉴스가 Notion에 저장되고 Discord로 발송됩니다.</p>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span class="code-label">Claude Code 실행 후 봇 코드 요청</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
-      <code class="block"><span class="cm"># discord-notion-bot 폴더에서 Claude Code 실행</span>
+      <div class="code-header"><span class="code-label">Claude Code 실행 후 스크립트 요청</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+      <code class="block"><span class="cm"># ai-news-bot 폴더에서 Claude Code 실행</span>
 <span class="cmd">claude</span> --dangerously-skip-permissions
 
 <span class="cm"># Claude Code 안에서 아래 입력</span>
-이 폴더에 Discord 봇을 만들어줘.
+이 폴더에 AI 뉴스 자동 수집 스크립트를 만들어줘.
 
 기능:
-- Discord 채널에서 "!메모 [내용]" 입력하면
-- .env의 NOTION_TOKEN으로 Notion에 오늘 날짜 제목 새 페이지 저장
-- 저장 완료 후 Discord에 "✅ Notion에 저장됐어요!" 답장
+- 웹 검색으로 오늘의 AI 관련 최신 뉴스 3개 수집
+- 각 뉴스 제목·요약·링크를 .env의 NOTION_TOKEN으로
+  Notion 페이지에 저장 (페이지 제목: "AI 뉴스 YYYY-MM-DD")
+- 동시에 DISCORD_WEBHOOK_URL로 Discord에 요약 발송
 
-node.js, discord.js, @notionhq/client, dotenv 패키지 사용.
-.env 파일은 이미 만들어져 있어.
-bot.js 파일 만들고 패키지 설치 명령어도 알려줘.</code>
+axios, dotenv, @notionhq/client 패키지 사용.
+.env 파일은 이미 있어.
+news.js 파일로 만들어줘.</code>
     </div>
 
-    <div class="tip"><strong>💡 Claude Code가 코드 다 짜줍니다</strong> — 직접 코딩할 필요 없어요. Claude Code가 bot.js를 생성하고 설치 명령어까지 알려줍니다. 알려준 대로 따라하면 됩니다.</div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">STEP 3-1 · 수동 테스트 — 스케줄 등록 전 먼저 확인</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+      <code class="block"><span class="cm"># PowerShell에서 직접 실행</span>
+<span class="cmd">node</span> news.js
+
+<span class="cm"># 성공 시 아래처럼 출력됨</span>
+<span class="ok">✅ Notion 페이지 생성 완료: AI 뉴스 2026-03-31</span>
+<span class="ok">✅ Discord 전송 완료</span>
+
+<span class="cm"># Notion에서 오늘 날짜 페이지 생성 확인</span>
+<span class="cm"># Discord 채널에서 뉴스 메시지 수신 확인</span></code>
+    </div>
+    <div class="tip"><strong>💡 먼저 수동으로 실행해보세요</strong> — 스케줄 등록 전에 <span class="ic">node news.js</span>가 정상 작동하는지 꼭 확인하세요. Notion 페이지가 생기고 Discord에 메시지가 오면 스케줄 등록으로 넘어갑니다.</div>
 
     <div class="divider"></div>
-    <div class="section-label">STEP 3 — Discord에서 테스트 &amp; 종료</div>
-
-    <div class="code-block">
-      <div class="code-header"><span class="code-label">Discord 채널에서 테스트 입력</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
-      <code class="block"><span class="cm"># Discord 채널에서 직접 입력</span>
-!메모 오늘 팀 회의에서 3월 출시 일정 확정함
-
-<span class="cm"># 봇이 아래처럼 답장하면 성공!</span>
-<span class="ok">✅ Notion에 저장됐어요!</span>
-
-<span class="cm"># Notion에서 오늘 날짜 새 페이지 생성 확인</span></code>
+    <div class="section-label">STEP 4 — Claude 스케줄 등록 (매일 오전 10시 자동 실행)</div>
+    <div class="concept-box">
+      <div class="concept-title">💡 Claude Code 스케줄 기능이란?</div>
+      <p>Claude Code에서 <strong>/schedule</strong> 명령어로 반복 실행 작업을 등록하는 기능입니다.<br>
+      cron 표현식으로 원하는 시간을 지정하면, PC가 켜져 있을 때 매일 자동으로 Claude가 지정 작업을 실행합니다.<br><br>
+      <strong>cron 표현식:</strong> <span class="ic">분 시 일 월 요일</span> 순서<br>
+      <span class="ic">0 10 * * *</span> = 매일 10시 00분 / <span class="ic">30 9 * * 1-5</span> = 평일 9시 30분</p>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span class="code-label">채널 감지 종료</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
-      <code class="block"><span class="cm"># Claude Code 안에서 입력</span>
-Discord 채널 감지 종료해줘.
+      <div class="code-header"><span class="code-label">Claude Code에서 스케줄 등록</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+      <code class="block"><span class="cm"># Claude Code 안에서 입력 (ai-news-bot 폴더에서 실행 중)</span>
+<span class="cm"># 매일 오전 10시에 뉴스 수집 자동 실행 등록</span>
+/schedule <span class="str">"0 10 * * *"</span> <span class="str">"C:\Users\$env:USERNAME\Desktop\claude-work\ai-news-bot 폴더로 이동 후 node news.js 실행해줘"</span>
 
-<span class="cm"># 또는 터미널 강제 종료</span>
-Ctrl + C</code>
+<span class="cm"># 등록된 스케줄 목록 확인</span>
+/schedule list
+
+<span class="cm"># 스케줄 삭제 (필요 시 — ID는 list에서 확인)</span>
+/schedule delete [스케줄_ID]</code>
     </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">대안 — Windows 작업 스케줄러로 등록 (Claude 스케줄이 안 될 때)</span><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+      <code class="block"><span class="cm"># 시작 메뉴 → "작업 스케줄러" 검색 → 실행</span>
+<span class="cm"># 오른쪽 패널 → 기본 작업 만들기(Create Basic Task)</span>
+<span class="cm">#</span>
+<span class="cm"># 이름: AI뉴스 자동수집</span>
+<span class="cm"># 트리거: 매일 / 시작 시간: 오전 10:00:00</span>
+<span class="cm"># 동작: 프로그램 시작</span>
+<span class="cm">#   프로그램: C:\Program Files\nodejs\node.exe</span>
+<span class="cm">#   인수: C:\Users\[이름]\Desktop\claude-work\ai-news-bot\news.js</span>
+<span class="cm">#</span>
+<span class="cm"># 마침(Finish) 클릭 → 작업 목록에 등록 확인</span></code>
+    </div>
+    <div class="tip"><strong>💡 PC가 켜져 있어야 실행됩니다</strong> — 스케줄은 PC가 켜진 상태에서만 동작합니다. 매일 10시 전에 PC를 켜두거나, 회사 컴퓨터처럼 항상 켜진 환경에서 활용하세요.</div>
 
     <div class="error-section">
       <div class="error-hd">⚠️ 자주 나오는 오류 해결법</div>
       <div class="error-item">
-        <div class="error-msg">Discord 연결 실패 / 토큰 오류</div>
-        <div class="error-fix"><strong>해결:</strong> Discord Developer Portal → Bot → Reset Token → 새 토큰으로 다시 요청</div>
+        <div class="error-msg">웹후크 URL 오류 / 404 Not Found</div>
+        <div class="error-fix"><strong>해결:</strong> Discord → 채널 편집 → 연동 → 웹후크에서 URL 재확인 후 .env 업데이트</div>
       </div>
       <div class="error-item">
-        <div class="error-msg">봇이 메시지에 반응하지 않음</div>
-        <div class="error-fix"><strong>해결:</strong> Discord Developer Portal → Bot → <strong>Message Content Intent</strong> 켜져 있는지 확인 → Save</div>
+        <div class="error-msg">Notion 저장 안 됨 / 401 Unauthorized</div>
+        <div class="error-fix"><strong>해결:</strong> 6강 Notion 토큰 만료 → notion.so/my-integrations → 토큰 재발급 → .env의 NOTION_TOKEN 교체</div>
       </div>
       <div class="error-item">
-        <div class="error-msg">Notion 저장 안 됨 / 401 오류</div>
-        <div class="error-fix"><strong>해결:</strong> 6강 Notion 토큰 만료 가능 → notion.so/my-integrations → 토큰 재발급 → claude_desktop_config.json 업데이트 → Claude Desktop 재시작</div>
+        <div class="error-msg">node news.js 실행 오류 / Cannot find module</div>
+        <div class="error-fix"><strong>해결:</strong> ai-news-bot 폴더에서 <span class="ic">npm install</span> 재실행 후 다시 시도</div>
+      </div>
+      <div class="error-item">
+        <div class="error-msg">/schedule 명령어를 찾을 수 없음</div>
+        <div class="error-fix"><strong>해결:</strong> Windows 작업 스케줄러 대안 방법 사용. 또는 Claude Code 최신 버전으로 업데이트: <span class="ic">npm install -g @anthropic-ai/claude-code</span></div>
       </div>
     </div>
 
-    <div class="practice"><div class="practice-hd"><div class="practice-dot"></div><span class="practice-title">실습 체크</span></div><p>Discord 채널에서 <span class="ic">!메모</span> 입력 후 Notion에 페이지가 자동 생성되면 성공입니다. 6강에서 만든 Notion 페이지 안에 메모가 쌓이는 것까지 확인해보세요!</p></div>
+    <div class="practice"><div class="practice-hd"><div class="practice-dot"></div><span class="practice-title">실습 체크</span></div><p><span class="ic">node news.js</span> 수동 실행 후 Notion에 오늘 날짜 AI 뉴스 페이지가 생기고 Discord 채널에 메시지가 도착하면 성공입니다. 스케줄 등록 후 <span class="ic">/schedule list</span>로 등록 확인까지 해보세요!</p></div>
 
     <div class="divider"></div>
     <div class="section-label">📋 7강 전체 복습 체크리스트</div>
@@ -1301,9 +1315,10 @@ Ctrl + C</code>
       <li>✅ MCP vs Skills 개념 차이 설명 가능</li>
       <li>✅ 서브 에이전트 3개 생성 + Teams 커피챗 실행 &amp; 중지 성공</li>
       <li>✅ Notion MCP 연결 후 페이지 자동 생성 확인 (6강)</li>
-      <li>✅ Claude CLI 채널 기능으로 Discord → Notion 자동 메모 완성 (7강)</li>
+      <li>✅ Discord 웹후크 발급 후 node news.js 수동 테스트 성공 (7강)</li>
+      <li>✅ Claude 스케줄 또는 Windows 작업 스케줄러로 매일 10시 자동화 등록 완료 (7강)</li>
     </ul>
-    <div class="tip"><strong>🎯 마지막 과제</strong> — 오늘 배운 기능 중 가장 유용한 것을 골라 실제 업무에 적용해보세요. 막히는 부분이 있으면 클로드에게 직접 물어보세요. 클로드가 가장 좋은 선생님입니다.</div>
+    <div class="tip"><strong>🎯 마지막 과제</strong> — AI 뉴스 외에 업무에 필요한 다른 정보(날씨, 환율, 업계 뉴스 등)도 같은 방식으로 자동화해보세요. <span class="ic">news.js</span> 안의 검색 키워드만 바꾸면 됩니다. 막히는 부분은 Claude Code에게 바로 물어보세요.</div>
   </div>
 </div>
 
